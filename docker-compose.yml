@@ -47,8 +47,6 @@ services:
       dockerfile: Dockerfile
     container_name: bitacoras_nginx
     restart: unless-stopped
-    ports:
-      - "${NGINX_PORT:-8080}:80"
     depends_on:
       - backend
       - frontend
