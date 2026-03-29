@@ -35,17 +35,23 @@ INSTRUCCIONES:
 1. Agrupa los work items en actividades coherentes (máximo 6 actividades, mínimo 3).
 2. Cada actividad debe tener:
    - "title": Título conciso y profesional de la actividad (máx 80 chars)
-   - "description": Descripción formal detallada de la actividad (2-4 oraciones), redactada en tercera persona o infinitivo, en tono técnico-profesional apropiado para un documento SENA. Debe detallar QUÉ se hizo, CÓMO y con qué herramientas/tecnologías.
+   - "description": Descripción formal de la actividad (2-4 oraciones), redactada en tercera persona o infinitivo, en tono técnico-profesional apropiado para un documento SENA. Describe QUÉ tipo de actividad se realizó y con qué tecnologías o metodologías generales, SIN mencionar nombres internos de servicios, módulos, clases ni componentes específicos del proyecto.
    - "competencias": Una o dos competencias del programa ADSO que aplican directamente a esta actividad. Redactar de forma precisa y relacionada con la actividad específica.
    - "start_date": Fecha de inicio estimada en formato YYYY-MM-DD (dentro del período)
    - "end_date": Fecha de fin estimada en formato YYYY-MM-DD (dentro del período)
-   - "evidence_description": Qué tipo de evidencia existe (ej: "Proceso: Implementación de pruebas unitarias en repositorio Git", "Entregable: Módulo de microservicio desarrollado y mergeado")
+   - "evidence_description": Qué tipo de evidencia existe (ej: "Proceso: Implementación de pruebas unitarias en repositorio Git", "Entregable: Componente de software desarrollado y mergeado")
    - "observations": Observaciones relevantes si aplica (puede ser vacío "")
    - "azure_work_item_ids": Lista de IDs de los work items agrupados en esta actividad
 
-3. La descripción debe sonar profesional y técnica, apta para presentar ante un instructor SENA.
-4. Usa lenguaje en español formal colombiano.
-5. Los fines de semana no cuentan como días de trabajo, tenlo en cuenta para las fechas.
+3. IMPORTANTE — Nivel de generalización en las descripciones:
+   - NO uses nombres específicos de microservicios, módulos, clases, métodos ni tablas internas del proyecto.
+   - SÍ puedes mencionar tecnologías generales: Java, Spring Boot, JUnit, Mockito, JaCoCo, Git, etc.
+   - En lugar de "microservicio ms-adm-polizas", escribe "microservicio de gestión" o simplemente "microservicio".
+   - En lugar de "clase PolicyService.java", escribe "componente de lógica de negocio".
+   - El objetivo es que la bitácora sea comprensible para un instructor SENA sin exponer detalles de arquitectura interna del cliente.
+4. La descripción debe sonar profesional y técnica, apta para presentar ante un instructor SENA.
+5. Usa lenguaje en español formal colombiano.
+6. Los fines de semana no cuentan como días de trabajo, tenlo en cuenta para las fechas.
 
 Responde ÚNICAMENTE con un JSON válido con esta estructura exacta:
 {{
