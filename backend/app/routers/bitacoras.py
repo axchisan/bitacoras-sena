@@ -114,26 +114,33 @@ async def generate_bitacora(
             detail="Esta bitácora ya tiene actividades. Usa regenerate=true para reemplazarlas."
         )
 
-    # Fetch work items
-    if req.work_item_ids:
-        work_items = await azure_devops.fetch_work_items_by_ids(req.work_item_ids)
+    # ── Modo bypass: actividades pre-generadas (ej: por Claude Code) ──────────
+    if req.activities:
+        generated = [
+            {**act.model_dump(), "is_ai_generated": False, "order_index": i}
+            for i, act in enumerate(req.activities)
+        ]
     else:
-        work_items = await azure_devops.fetch_work_items_by_date_range(
-            bitacora.period_start, bitacora.period_end
-        )
+        # Fetch work items
+        if req.work_item_ids:
+            work_items = await azure_devops.fetch_work_items_by_ids(req.work_item_ids)
+        else:
+            work_items = await azure_devops.fetch_work_items_by_date_range(
+                bitacora.period_start, bitacora.period_end
+            )
 
-    if not work_items:
-        raise HTTPException(
-            status_code=404,
-            detail=f"No se encontraron work items entre {bitacora.period_start} y {bitacora.period_end}"
-        )
+        if not work_items:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No se encontraron work items entre {bitacora.period_start} y {bitacora.period_end}"
+            )
 
-    period = get_period_for_bitacora(bitacora.number)
-    generated = await claude_service.generate_bitacora_activities(
-        bitacora_number=bitacora.number,
-        period_label=period.label,
-        work_items=work_items,
-    )
+        period = get_period_for_bitacora(bitacora.number)
+        generated = await claude_service.generate_bitacora_activities(
+            bitacora_number=bitacora.number,
+            period_label=period.label,
+            work_items=work_items,
+        )
 
     # If regenerating, delete existing activities
     if req.regenerate and bitacora.activities:

@@ -13,7 +13,7 @@ import { ActivityCard } from "../components/ActivityCard";
 import { WorkItemsPanel } from "../components/WorkItemsPanel";
 import {
   Sparkles, Download, Upload, ArrowLeft, RefreshCw,
-  CalendarDays, ExternalLink, ChevronDown, ChevronUp,
+  CalendarDays, ExternalLink, ChevronDown, ChevronUp, Terminal, X,
 } from "lucide-react";
 
 export default function BitacoraDetail() {
@@ -25,6 +25,7 @@ export default function BitacoraDetail() {
   const [showWorkItems, setShowWorkItems] = useState(false);
   const [selectedWorkItems, setSelectedWorkItems] = useState<number[]>([]);
   const [regenerate, setRegenerate] = useState(false);
+  const [showClaudeModal, setShowClaudeModal] = useState(false);
 
   const { data: bitacora, isLoading } = useQuery({
     queryKey: ["bitacora", bitacoraId],
@@ -166,6 +167,15 @@ export default function BitacoraDetail() {
           )}
 
           <button
+            onClick={() => setShowClaudeModal(true)}
+            className="btn-secondary"
+            title="Generar usando Claude Code (sin créditos de API)"
+          >
+            <Terminal size={16} />
+            Claude Code
+          </button>
+
+          <button
             onClick={() => {
               if (hasActivities) setRegenerate(true);
               generateMut.mutate();
@@ -221,6 +231,49 @@ export default function BitacoraDetail() {
             <p className="text-sm text-gray-500 mt-1">
               Claude está analizando tus work items para crear la bitácora
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Claude Code */}
+      {showClaudeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
+          <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-lg shadow-2xl">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-800">
+              <div className="flex items-center gap-2">
+                <Terminal size={18} className="text-green-400" />
+                <span className="font-semibold text-gray-100">Generar via Claude Code</span>
+              </div>
+              <button onClick={() => setShowClaudeModal(false)} className="btn-ghost p-1">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="px-6 py-5 space-y-4">
+              <p className="text-sm text-gray-400">
+                Usa esta opción cuando no tengas créditos en la API de Claude.
+                Claude Code (el CLI) genera las actividades usando tu plan Pro.
+              </p>
+              <div className="bg-gray-800 rounded-lg px-4 py-3 space-y-1">
+                <p className="text-xs text-gray-500 mb-2">Dile esto a Claude Code en tu terminal:</p>
+                <code className="text-green-400 text-sm font-mono block">
+                  genera la bitácora {bitacora.number}
+                </code>
+              </div>
+              <div className="text-xs text-gray-600 space-y-1">
+                <p>• Claude Code consultará los work items de Azure DevOps</p>
+                <p>• Generará las actividades y las publicará directamente en la app</p>
+                <p>• La página se actualizará automáticamente al terminar</p>
+              </div>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(`genera la bitácora ${bitacora.number}`);
+                  toast.success("Comando copiado al portapapeles");
+                }}
+                className="btn-secondary w-full text-sm"
+              >
+                Copiar comando
+              </button>
+            </div>
           </div>
         </div>
       )}

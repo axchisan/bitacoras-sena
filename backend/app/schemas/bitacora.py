@@ -125,9 +125,23 @@ class WorkItemOut(BaseModel):
 
 # ─── Generate request ─────────────────────────────────────────────────────────
 
+class ActivityImport(BaseModel):
+    """Actividad pre-generada (ej: por Claude Code). Bypasea la API de Claude."""
+    title: str
+    description: str
+    competencias: Optional[str] = None
+    start_date: Optional[str] = None  # YYYY-MM-DD
+    end_date: Optional[str] = None    # YYYY-MM-DD
+    evidence_description: Optional[str] = None
+    observations: Optional[str] = None
+    azure_work_item_ids: Optional[list[int]] = None
+    order_index: int = 0
+
+
 class GenerateRequest(BaseModel):
     work_item_ids: Optional[list[int]] = None  # Si None, usa todos del período
     regenerate: bool = False  # Si True, reemplaza actividades existentes
+    activities: Optional[list[ActivityImport]] = None  # Si se provee, bypasea Claude API
 
 
 class ReorderActivities(BaseModel):
