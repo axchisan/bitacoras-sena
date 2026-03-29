@@ -48,9 +48,9 @@ INSTRUCCIONES:
 5. Los fines de semana no cuentan como días de trabajo, tenlo en cuenta para las fechas.
 
 Responde ÚNICAMENTE con un JSON válido con esta estructura exacta:
-{
+{{
   "activities": [
-    {
+    {{
       "title": "...",
       "description": "...",
       "competencias": "...",
@@ -59,9 +59,9 @@ Responde ÚNICAMENTE con un JSON válido con esta estructura exacta:
       "evidence_description": "...",
       "observations": "",
       "azure_work_item_ids": [123, 456]
-    }
+    }}
   ]
-}
+}}
 """
 
 

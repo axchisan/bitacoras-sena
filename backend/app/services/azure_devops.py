@@ -25,40 +25,42 @@ async def fetch_work_items_by_date_range(
     Query Azure DevOps WIQL for work items created/modified in a date range.
     Returns raw work item dicts with all relevant fields.
     """
-    start_str = start.strftime("%Y-%m-%dT00:00:00Z")
-    end_str = end.strftime("%Y-%m-%dT23:59:59Z")
+    # Azure DevOps WIQL only accepts date format, not datetime/timestamps
+    start_str = start.strftime("%Y-%m-%d")
+    end_str = end.strftime("%Y-%m-%d")
+    project = settings.azure_devops_project
 
-    # Build WIQL — items assigned to current user, changed within the period
+    # Build WIQL — filter by project name string to avoid URL encoding issues
     assigned_clause = "[System.AssignedTo] = @Me AND" if assigned_to_me else ""
     wiql = {
-        "query": f"""
-            SELECT [System.Id]
-            FROM WorkItems
-            WHERE {assigned_clause}
-                  [System.TeamProject] = @project
-                  AND [System.WorkItemType] IN ('Task', 'User Story', 'Bug', 'Feature')
-                  AND (
-                      [System.ChangedDate] >= '{start_str}'
-                      AND [System.ChangedDate] <= '{end_str}'
-                  )
-            ORDER BY [System.ChangedDate] DESC
-        """
+        "query": (
+            f"SELECT [System.Id] FROM WorkItems "
+            f"WHERE {assigned_clause} "
+            f"[System.TeamProject] = '{project}' "
+            f"AND [System.WorkItemType] IN ('Task', 'User Story', 'Bug', 'Feature') "
+            f"AND [System.ChangedDate] >= '{start_str}' "
+            f"AND [System.ChangedDate] <= '{end_str}' "
+            f"ORDER BY [System.ChangedDate] DESC"
+        )
     }
 
-    project_encoded = settings.azure_devops_project.replace(" ", "%20")
-    url = f"{_base_url()}/{project_encoded}/_apis/wit/wiql?api-version=7.1"
+    # Use org-level endpoint — avoids project name URL encoding issues
+    url = f"{_base_url()}/_apis/wit/wiql?api-version=7.1"
 
     async with httpx.AsyncClient(timeout=30) as client:
         resp = await client.post(url, json=wiql, headers=_get_auth_header())
-        resp.raise_for_status()
+        if not resp.is_success:
+            raise Exception(
+                f"Azure DevOps WIQL error {resp.status_code}: {resp.text[:300]}"
+            )
         data = resp.json()
 
     work_item_refs = data.get("workItems", [])
     if not work_item_refs:
         return []
 
-    ids = [str(wi["id"]) for wi in work_item_refs[:50]]  # max 50
-    return await fetch_work_items_by_ids([int(i) for i in ids])
+    ids = [wi["id"] for wi in work_item_refs[:50]]
+    return await fetch_work_items_by_ids(ids)
 
 
 async def fetch_work_items_by_ids(ids: list[int]) -> list[dict]:
@@ -82,13 +84,16 @@ async def fetch_work_items_by_ids(ids: list[int]) -> list[dict]:
         "Microsoft.VSTS.Scheduling.OriginalEstimate",
     ]
 
-    project_encoded = settings.azure_devops_project.replace(" ", "%20")
-    url = f"{_base_url()}/{project_encoded}/_apis/wit/workitemsbatch?api-version=7.1"
+    # workitemsbatch is org-level — no project in URL needed
+    url = f"{_base_url()}/_apis/wit/workitemsbatch?api-version=7.1"
     payload = {"ids": ids[:200], "fields": fields}
 
     async with httpx.AsyncClient(timeout=30) as client:
         resp = await client.post(url, json=payload, headers=_get_auth_header())
-        resp.raise_for_status()
+        if not resp.is_success:
+            raise Exception(
+                f"Azure DevOps batch error {resp.status_code}: {resp.text[:300]}"
+            )
         data = resp.json()
 
     return [_parse_work_item(wi) for wi in data.get("value", [])]
