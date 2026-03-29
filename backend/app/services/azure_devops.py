@@ -99,6 +99,19 @@ async def fetch_work_items_by_ids(ids: list[int]) -> list[dict]:
     return [_parse_work_item(wi) for wi in data.get("value", [])]
 
 
+def _parse_date(value: str | None) -> datetime | None:
+    """Parse ISO 8601 date strings from Azure DevOps into datetime objects."""
+    if not value:
+        return None
+    if isinstance(value, datetime):
+        return value
+    try:
+        # Handle formats like '2026-02-02T17:24:38.26Z' or '2026-02-02T17:24:38.813Z'
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
 def _parse_work_item(raw: dict) -> dict:
     fields = raw.get("fields", {})
     assigned_to = fields.get("System.AssignedTo", {})
@@ -117,9 +130,9 @@ def _parse_work_item(raw: dict) -> dict:
         "tags": fields.get("System.Tags", ""),
         "completed_work": fields.get("Microsoft.VSTS.Scheduling.CompletedWork"),
         "original_estimate": fields.get("Microsoft.VSTS.Scheduling.OriginalEstimate"),
-        "created_date": fields.get("System.CreatedDate"),
-        "changed_date": fields.get("System.ChangedDate"),
-        "closed_date": fields.get("Microsoft.VSTS.Common.ClosedDate"),
+        "created_date": _parse_date(fields.get("System.CreatedDate")),
+        "changed_date": _parse_date(fields.get("System.ChangedDate")),
+        "closed_date": _parse_date(fields.get("Microsoft.VSTS.Common.ClosedDate")),
         "url": f"https://dev.azure.com/{settings.azure_devops_org}/"
                f"{settings.azure_devops_project}/_workitems/edit/{raw['id']}",
     }

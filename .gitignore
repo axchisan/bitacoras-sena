@@ -10,4 +10,5 @@ output/
 uploads/
 *.xlsx
 !templates/bitacora_base.xlsx
+!backend/templates/bitacora_base.xlsx
 .DS_Store

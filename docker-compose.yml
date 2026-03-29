@@ -25,7 +25,6 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://bitacoras:${POSTGRES_PASSWORD}@postgres:5432/bitacoras_db
     volumes:
-      - ./templates:/app/templates:ro
       - uploads_data:/app/uploads
       - output_data:/app/output
     depends_on:
