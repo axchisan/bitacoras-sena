@@ -80,7 +80,11 @@ async def update_bitacora(
     data: BitacoraUpdate,
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(Bitacora).where(Bitacora.id == bitacora_id))
+    result = await db.execute(
+        select(Bitacora)
+        .options(selectinload(Bitacora.activities).selectinload(Activity.evidence_files))
+        .where(Bitacora.id == bitacora_id)
+    )
     bitacora = result.scalar_one_or_none()
     if not bitacora:
         raise HTTPException(status_code=404, detail="Bitácora no encontrada")
@@ -90,7 +94,13 @@ async def update_bitacora(
 
     await db.commit()
     await db.refresh(bitacora)
-    return bitacora
+
+    result = await db.execute(
+        select(Bitacora)
+        .options(selectinload(Bitacora.activities).selectinload(Activity.evidence_files))
+        .where(Bitacora.id == bitacora_id)
+    )
+    return result.scalar_one()
 
 
 @router.post("/{bitacora_id}/generate", response_model=BitacoraOut)
