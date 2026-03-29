@@ -32,39 +32,65 @@ COL_EVIDENCE = 8
 COL_OBSERVATIONS = 9
 
 
+def _strip_worksheet_xml(txt: str) -> str:
+    """Remove all elements from worksheet XML that cause openpyxl to hang on save."""
+    # Remove drawing references
+    txt = re.sub(r"<drawing[^/]*/?>", "", txt)
+    txt = re.sub(r"<drawing[^>]*>.*?</drawing>", "", txt, flags=re.DOTALL)
+    # Remove standard dataValidations block
+    txt = re.sub(r"<dataValidations[^>]*>.*?</dataValidations>", "", txt, flags=re.DOTALL)
+    # Remove conditional formatting (can be huge and slow)
+    txt = re.sub(r"<conditionalFormatting[^>]*>.*?</conditionalFormatting>", "", txt, flags=re.DOTALL)
+    # Remove extension lists (contains x14:dataValidations, sparklines, etc.)
+    txt = re.sub(r"<extLst[^>]*>.*?</extLst>", "", txt, flags=re.DOTALL)
+    # Remove table parts references
+    txt = re.sub(r"<tableParts[^/]*/?>", "", txt)
+    txt = re.sub(r"<tableParts[^>]*>.*?</tableParts>", "", txt, flags=re.DOTALL)
+    # Remove OLE objects and controls
+    txt = re.sub(r"<oleObjects[^>]*>.*?</oleObjects>", "", txt, flags=re.DOTALL)
+    txt = re.sub(r"<controls[^>]*>.*?</controls>", "", txt, flags=re.DOTALL)
+    # Remove legacy drawing references
+    txt = re.sub(r"<legacyDrawing[^/]*/?>", "", txt)
+    txt = re.sub(r"<legacyDrawingHF[^/]*/?>", "", txt)
+    return txt
+
+
 def _strip_drawings(src: Path, dst: Path) -> None:
     """
-    Copy xlsx stripping DrawingML and DataValidation elements that cause
-    openpyxl to hang. xlsx is a zip — we manipulate the XML directly.
+    Copy xlsx stripping DrawingML and other elements that cause openpyxl to
+    hang on load or save. xlsx is a zip — we manipulate the XML directly.
     """
     with zipfile.ZipFile(src, "r") as zin, \
          zipfile.ZipFile(dst, "w", zipfile.ZIP_DEFLATED) as zout:
 
         for item in zin.infolist():
             # Skip drawing binary files entirely
-            if "drawings/" in item.filename and item.filename != "xl/drawings/":
+            if re.search(r"xl/(drawings|charts|chartsheets|diagrams)/", item.filename):
+                continue
+            # Skip VML drawings (legacy shapes)
+            if item.filename.startswith("xl/drawings") or "vmlDrawing" in item.filename:
+                continue
+            # Skip media files (images embedded in drawings)
+            if item.filename.startswith("xl/media/"):
                 continue
 
             data = zin.read(item.filename)
 
-            # Strip <drawing .../> and <dataValidations ...> from worksheet XML
             if item.filename.startswith("xl/worksheets/") and item.filename.endswith(".xml"):
                 txt = data.decode("utf-8", errors="replace")
-                txt = re.sub(r"<drawing[^/]*/?>", "", txt)
-                txt = re.sub(r"<drawing[^>]*>.*?</drawing>", "", txt, flags=re.DOTALL)
-                txt = re.sub(r"<dataValidations[^>]*>.*?</dataValidations>", "", txt, flags=re.DOTALL)
+                txt = _strip_worksheet_xml(txt)
                 data = txt.encode("utf-8")
 
-            # Remove drawing Override entries from [Content_Types].xml
             elif item.filename == "[Content_Types].xml":
                 txt = data.decode("utf-8", errors="replace")
-                txt = re.sub(r'<Override[^>]*[Dd]rawing[^>]*/>', "", txt)
+                # Remove drawing, chart, vml, and diagram content type overrides
+                txt = re.sub(r'<Override[^>]*(drawing|chart|vml|diagram|Drawing|Chart)[^>]*/>', "", txt)
                 data = txt.encode("utf-8")
 
-            # Remove drawing Relationship entries from .rels files
             elif item.filename.endswith(".rels"):
                 txt = data.decode("utf-8", errors="replace")
-                txt = re.sub(r'<Relationship[^>]*[Dd]rawing[^>]*/>', "", txt)
+                # Remove relationships to drawings, charts, vml, media
+                txt = re.sub(r'<Relationship[^>]*(drawing|chart|vml|media|diagram|Drawing|Chart)[^>]*/>', "", txt)
                 data = txt.encode("utf-8")
 
             zout.writestr(item, data)
