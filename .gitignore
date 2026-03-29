@@ -1,0 +1,12 @@
+.env
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+node_modules/
+dist/
+output/
+uploads/
+*.xlsx
+!templates/bitacora_base.xlsx
+.DS_Store
