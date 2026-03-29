@@ -1,3 +1,4 @@
+import asyncio
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
@@ -221,7 +222,8 @@ async def export_bitacora(bitacora_id: int, db: AsyncSession = Depends(get_db)):
         for a in sorted(bitacora.activities, key=lambda x: x.order_index)
     ]
 
-    output_path = excel_service.generate_excel(
+    output_path = await asyncio.to_thread(
+        excel_service.generate_excel,
         bitacora_number=bitacora.number,
         period_start=bitacora.period_start,
         period_end=bitacora.period_end,
