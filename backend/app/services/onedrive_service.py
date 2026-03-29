@@ -1,3 +1,4 @@
+import asyncio
 from pathlib import Path
 from typing import Optional
 import httpx
@@ -21,27 +22,39 @@ def _get_access_token() -> Optional[str]:
     return result.get("access_token")
 
 
+def _drive_base() -> str:
+    """
+    Build the Graph API drive base URL.
+    client_credentials requires /users/{id}/drive — /me/drive only works with delegated tokens.
+    """
+    user = settings.onedrive_user_id.strip()
+    if not user:
+        raise Exception(
+            "ONEDRIVE_USER_ID no está configurado. "
+            "Debe ser el email o el Object ID de la cuenta OneDrive."
+        )
+    return f"https://graph.microsoft.com/v1.0/users/{user}/drive"
+
+
 async def upload_file(local_path: Path, remote_filename: str) -> Optional[str]:
     """
     Upload a file to OneDrive and return the shareable link.
-    Uses Microsoft Graph API with app-level permissions.
+    Uses Microsoft Graph API with app-level (client_credentials) permissions.
     """
-    token = _get_access_token()
+    token = await asyncio.to_thread(_get_access_token)
     if not token:
         return None
 
+    drive_base = _drive_base()
     folder = settings.onedrive_folder_path.strip("/")
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/octet-stream"}
 
-    upload_url = (
-        f"https://graph.microsoft.com/v1.0/me/drive/root:/"
-        f"{folder}/{remote_filename}:/content"
-    )
+    upload_url = f"{drive_base}/root:/{folder}/{remote_filename}:/content"
 
     with open(local_path, "rb") as f:
         content = f.read()
 
-    async with httpx.AsyncClient(timeout=60) as client:
+    async with httpx.AsyncClient(timeout=120) as client:
         resp = await client.put(upload_url, content=content, headers=headers)
         if resp.status_code not in (200, 201):
             raise Exception(f"OneDrive upload failed: {resp.status_code} {resp.text}")
@@ -49,7 +62,7 @@ async def upload_file(local_path: Path, remote_filename: str) -> Optional[str]:
         item_id = item.get("id")
 
     # Create a shareable link
-    share_url = f"https://graph.microsoft.com/v1.0/me/drive/items/{item_id}/createLink"
+    share_url = f"{drive_base}/items/{item_id}/createLink"
     async with httpx.AsyncClient(timeout=15) as client:
         share_resp = await client.post(
             share_url,
@@ -75,4 +88,5 @@ def is_configured() -> bool:
         settings.onedrive_client_id
         and settings.onedrive_client_secret
         and settings.onedrive_tenant_id
+        and settings.onedrive_user_id
     )

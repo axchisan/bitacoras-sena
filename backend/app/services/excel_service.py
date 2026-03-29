@@ -48,7 +48,7 @@ def generate_excel(
 
     shutil.copy2(TEMPLATE_PATH, output_path)
 
-    wb = openpyxl.load_workbook(str(output_path))
+    wb = openpyxl.load_workbook(str(output_path), data_only=True, keep_vba=False)
     ws = wb[SHEET_NAME]
 
     # ── Update header fields ──────────────────────────────────────────────────
