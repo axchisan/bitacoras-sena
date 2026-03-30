@@ -7,49 +7,70 @@ from app.config import get_settings
 
 settings = get_settings()
 
+# Caché del access token en memoria (expira ~1h, MSAL lo renueva solo)
+_msal_app: Optional[msal.ConfidentialClientApplication] = None
+
+
+def _get_msal_app() -> msal.ConfidentialClientApplication:
+    global _msal_app
+    if _msal_app is None:
+        # Para cuentas personales de Microsoft usar "consumers"
+        # Para cuentas organizacionales usar el tenant_id específico
+        authority = f"https://login.microsoftonline.com/consumers"
+        _msal_app = msal.ConfidentialClientApplication(
+            settings.onedrive_client_id,
+            authority=authority,
+            client_credential=settings.onedrive_client_secret,
+        )
+    return _msal_app
+
 
 def _get_access_token() -> Optional[str]:
-    if not all([settings.onedrive_client_id, settings.onedrive_client_secret, settings.onedrive_tenant_id]):
+    """
+    Obtiene un access token usando el refresh_token almacenado.
+    El refresh_token se obtiene una sola vez ejecutando scripts/get_onedrive_token.py.
+    """
+    if not all([
+        settings.onedrive_client_id,
+        settings.onedrive_client_secret,
+        settings.onedrive_refresh_token,
+    ]):
         return None
 
-    authority = f"https://login.microsoftonline.com/{settings.onedrive_tenant_id}"
-    app = msal.ConfidentialClientApplication(
-        settings.onedrive_client_id,
-        authority=authority,
-        client_credential=settings.onedrive_client_secret,
+    app = _get_msal_app()
+    scopes = ["https://graph.microsoft.com/Files.ReadWrite", "offline_access"]
+
+    # Intentar con el refresh_token
+    result = app.acquire_token_by_refresh_token(
+        settings.onedrive_refresh_token,
+        scopes=scopes,
     )
-    result = app.acquire_token_for_client(scopes=["https://graph.microsoft.com/.default"])
-    return result.get("access_token")
 
+    if "access_token" in result:
+        return result["access_token"]
 
-def _drive_base() -> str:
-    """
-    Build the Graph API drive base URL.
-    client_credentials requires /users/{id}/drive — /me/drive only works with delegated tokens.
-    """
-    user = settings.onedrive_user_id.strip()
-    if not user:
-        raise Exception(
-            "ONEDRIVE_USER_ID no está configurado. "
-            "Debe ser el email o el Object ID de la cuenta OneDrive."
-        )
-    return f"https://graph.microsoft.com/v1.0/users/{user}/drive"
+    # Si falla, loguear el error
+    error = result.get("error_description", result.get("error", "unknown"))
+    raise Exception(f"No se pudo obtener access token de OneDrive: {error}")
 
 
 async def upload_file(local_path: Path, remote_filename: str) -> Optional[str]:
     """
-    Upload a file to OneDrive and return the shareable link.
-    Uses Microsoft Graph API with app-level (client_credentials) permissions.
+    Sube un archivo al OneDrive personal y retorna el enlace compartible.
+    Usa Microsoft Graph API con refresh_token (delegated flow para cuentas personales).
     """
     token = await asyncio.to_thread(_get_access_token)
     if not token:
         return None
 
-    drive_base = _drive_base()
     folder = settings.onedrive_folder_path.strip("/")
-    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/octet-stream"}
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/octet-stream",
+    }
 
-    upload_url = f"{drive_base}/root:/{folder}/{remote_filename}:/content"
+    # Para cuentas personales de Microsoft usar /me/drive (token delegado)
+    upload_url = f"https://graph.microsoft.com/v1.0/me/drive/root:/{folder}/{remote_filename}:/content"
 
     with open(local_path, "rb") as f:
         content = f.read()
@@ -61,12 +82,12 @@ async def upload_file(local_path: Path, remote_filename: str) -> Optional[str]:
         item = resp.json()
         item_id = item.get("id")
 
-    # Create a shareable link
-    share_url = f"{drive_base}/items/{item_id}/createLink"
+    # Crear enlace compartible
+    share_url = f"https://graph.microsoft.com/v1.0/me/drive/items/{item_id}/createLink"
     async with httpx.AsyncClient(timeout=15) as client:
         share_resp = await client.post(
             share_url,
-            json={"type": "view", "scope": "organization"},
+            json={"type": "view", "scope": "anonymous"},
             headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
         )
         if share_resp.status_code in (200, 201):
@@ -77,7 +98,7 @@ async def upload_file(local_path: Path, remote_filename: str) -> Optional[str]:
 
 
 async def upload_evidence(local_path: Path, bitacora_number: int, filename: str) -> Optional[str]:
-    """Upload an evidence file to OneDrive under the bitácora folder."""
+    """Sube un archivo de evidencia al OneDrive bajo la carpeta de la bitácora."""
     folder = settings.onedrive_folder_path.strip("/")
     remote_name = f"Bitacora{bitacora_number}/{filename}"
     return await upload_file(local_path, remote_name)
@@ -87,6 +108,5 @@ def is_configured() -> bool:
     return bool(
         settings.onedrive_client_id
         and settings.onedrive_client_secret
-        and settings.onedrive_tenant_id
-        and settings.onedrive_user_id
+        and settings.onedrive_refresh_token
     )

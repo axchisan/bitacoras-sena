@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     onedrive_client_secret: str = ""
     onedrive_tenant_id: str = ""
     onedrive_folder_path: str = "/Bitacoras SENA"
-    onedrive_user_id: str = ""  # Email o User ID de la cuenta OneDrive (requerido con client_credentials)
+    onedrive_refresh_token: str = ""  # Obtenido con scripts/get_onedrive_token.py (una sola vez)
 
     # App
     secret_key: str = "change_this_secret"

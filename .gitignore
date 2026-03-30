@@ -12,3 +12,5 @@ uploads/
 !templates/bitacora_base.xlsx
 !backend/templates/bitacora_base.xlsx
 .DS_Store
+onedrive_tokens.json
+test_excel_debug.py
