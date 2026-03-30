@@ -7,20 +7,18 @@ from app.config import get_settings
 
 settings = get_settings()
 
-# Caché del access token en memoria (expira ~1h, MSAL lo renueva solo)
-_msal_app: Optional[msal.ConfidentialClientApplication] = None
+# Caché de la app MSAL (PublicClientApplication para device code / refresh token)
+_msal_app: Optional[msal.PublicClientApplication] = None
 
 
-def _get_msal_app() -> msal.ConfidentialClientApplication:
+def _get_msal_app() -> msal.PublicClientApplication:
     global _msal_app
     if _msal_app is None:
-        # Para cuentas personales de Microsoft usar "consumers"
-        # Para cuentas organizacionales usar el tenant_id específico
-        authority = f"https://login.microsoftonline.com/consumers"
-        _msal_app = msal.ConfidentialClientApplication(
+        # PublicClientApplication para flujo delegado con cuentas personales de Microsoft
+        authority = "https://login.microsoftonline.com/consumers"
+        _msal_app = msal.PublicClientApplication(
             settings.onedrive_client_id,
             authority=authority,
-            client_credential=settings.onedrive_client_secret,
         )
     return _msal_app
 
@@ -30,17 +28,12 @@ def _get_access_token() -> Optional[str]:
     Obtiene un access token usando el refresh_token almacenado.
     El refresh_token se obtiene una sola vez ejecutando scripts/get_onedrive_token.py.
     """
-    if not all([
-        settings.onedrive_client_id,
-        settings.onedrive_client_secret,
-        settings.onedrive_refresh_token,
-    ]):
+    if not all([settings.onedrive_client_id, settings.onedrive_refresh_token]):
         return None
 
     app = _get_msal_app()
-    scopes = ["https://graph.microsoft.com/Files.ReadWrite", "offline_access"]
+    scopes = ["Files.ReadWrite", "offline_access"]
 
-    # Intentar con el refresh_token
     result = app.acquire_token_by_refresh_token(
         settings.onedrive_refresh_token,
         scopes=scopes,
@@ -49,7 +42,6 @@ def _get_access_token() -> Optional[str]:
     if "access_token" in result:
         return result["access_token"]
 
-    # Si falla, loguear el error
     error = result.get("error_description", result.get("error", "unknown"))
     raise Exception(f"No se pudo obtener access token de OneDrive: {error}")
 
