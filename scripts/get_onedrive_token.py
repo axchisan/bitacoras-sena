@@ -17,7 +17,7 @@ CLIENT_ID = os.getenv("ONEDRIVE_CLIENT_ID") or input("ONEDRIVE_CLIENT_ID: ").str
 AUTHORITY = "https://login.microsoftonline.com/consumers"
 
 # Scopes para OneDrive personal
-SCOPES = ["Files.ReadWrite", "offline_access"]
+SCOPES = ["Files.ReadWrite"]  # offline_access lo agrega MSAL automáticamente
 
 app = msal.PublicClientApplication(CLIENT_ID, authority=AUTHORITY)
 

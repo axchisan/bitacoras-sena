@@ -32,7 +32,7 @@ def _get_access_token() -> Optional[str]:
         return None
 
     app = _get_msal_app()
-    scopes = ["Files.ReadWrite", "offline_access"]
+    scopes = ["Files.ReadWrite"]  # offline_access lo gestiona MSAL internamente
 
     result = app.acquire_token_by_refresh_token(
         settings.onedrive_refresh_token,
