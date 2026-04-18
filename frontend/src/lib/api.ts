@@ -123,7 +123,7 @@ export const generateBitacora = (
     .then((r) => r.data);
 
 export const exportBitacora = (id: number) =>
-  api.post<{ download_url: string }>(`/bitacoras/${id}/export`).then((r) => r.data);
+  api.post<{ download_url: string }>(`/bitacoras/${id}/export`, undefined, { timeout: 180_000 }).then((r) => r.data);
 
 export const uploadToOneDrive = (id: number) =>
   api.post<{ url: string }>(`/bitacoras/${id}/upload-onedrive`).then((r) => r.data);

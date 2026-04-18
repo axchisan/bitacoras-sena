@@ -179,8 +179,7 @@ export default function BitacoraDetail() {
             <button
               type="button"
               onClick={() => oneDriveMut.mutate()}
-              disabled={oneDriveMut.isPending || !bitacora.excel_file_path}
-              title={!bitacora.excel_file_path ? "Primero exporta el Excel" : "Subir a OneDrive"}
+              disabled={oneDriveMut.isPending}
               className="btn-secondary"
             >
               {oneDriveMut.isPending ? <Spinner className="w-4 h-4" /> : <Upload size={16} />}

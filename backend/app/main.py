@@ -7,6 +7,7 @@ from pathlib import Path
 from app.config import get_settings
 from app.database import create_tables
 from app.routers import bitacoras, activities, work_items, evidence
+from app.services import excel_service
 
 settings = get_settings()
 
@@ -17,6 +18,9 @@ async def lifespan(app: FastAPI):
     await create_tables()
     Path("/app/uploads").mkdir(parents=True, exist_ok=True)
     Path("/app/output").mkdir(parents=True, exist_ok=True)
+    # Pre-generate the clean template so the first export is fast
+    import asyncio
+    await asyncio.to_thread(excel_service._get_clean_template)
     yield
     # Shutdown — nothing to clean up
 
