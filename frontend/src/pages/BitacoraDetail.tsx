@@ -69,8 +69,7 @@ export default function BitacoraDetail() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["bitacora", bitacoraId] });
       qc.invalidateQueries({ queryKey: ["bitacoras"] });
-      toast.success("Excel generado");
-      window.open(`/api/bitacoras/${bitacoraId}/download`, "_blank");
+      toast.success("Excel descargado");
     },
     onError: (e: Error) => toast.error(e.message),
   });

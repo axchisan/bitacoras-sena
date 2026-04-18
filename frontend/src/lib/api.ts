@@ -122,8 +122,25 @@ export const generateBitacora = (
     })
     .then((r) => r.data);
 
-export const exportBitacora = (id: number) =>
-  api.post<{ download_url: string }>(`/bitacoras/${id}/export`, undefined, { timeout: 180_000 }).then((r) => r.data);
+export const exportBitacora = async (id: number) => {
+  const response = await api.post(`/bitacoras/${id}/export`, undefined, {
+    responseType: "blob",
+    timeout: 180_000,
+  });
+
+  const disposition = (response.headers["content-disposition"] || "") as string;
+  const match = disposition.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i);
+  const filename = match ? decodeURIComponent(match[1]) : `Bitacora${id}.xlsx`;
+
+  const url = URL.createObjectURL(response.data as Blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+};
 
 export const uploadToOneDrive = (id: number) =>
   api.post<{ url: string }>(`/bitacoras/${id}/upload-onedrive`).then((r) => r.data);

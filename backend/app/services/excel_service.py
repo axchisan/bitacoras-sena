@@ -126,9 +126,10 @@ def _insert_evidence_images(ws, row: int, col: int, image_paths: list[str]) -> N
     if not valid_paths:
         return
 
-    img_w, img_h = 160, 120  # pixels per image
-    # Set row tall enough to show all stacked images (1 pt ≈ 1.33 px)
-    ws.row_dimensions[row].height = max(90, len(valid_paths) * (img_h * 0.75 + 4))
+    img_w, img_h = 300, 220  # pixels per image (bigger, fills the evidence cell)
+    # Set row tall enough to show all stacked images (1 pt ≈ 1.33 px → px * 0.75 = pt)
+    per_img_pt = img_h * 0.75 + 6
+    ws.row_dimensions[row].height = max(100, len(valid_paths) * per_img_pt)
 
     for idx, img_path in enumerate(valid_paths):
         try:
@@ -198,16 +199,18 @@ def generate_excel(
                 end = dt.strptime(end, "%Y-%m-%d").date()
             ws.cell(row=row, column=COL_END_DATE).value = end.strftime("%d/%m/%y")
 
+        evidence_images = activity.get("evidence_images", [])
+
         ev_cell = ws.cell(row=row, column=COL_EVIDENCE)
-        ev_cell.value = activity.get("evidence_description", "")
+        # Si hay imágenes, dejar la celda vacía para que la foto no quede
+        # superpuesta con el texto de "Evidencia de cumplimiento".
+        ev_cell.value = "" if evidence_images else activity.get("evidence_description", "")
         ev_cell.alignment = wrap_alignment
 
         obs_cell = ws.cell(row=row, column=COL_OBSERVATIONS)
         obs_cell.value = activity.get("observations", "")
         obs_cell.alignment = wrap_alignment
 
-        # Insertar imágenes de evidencia en la celda correspondiente
-        evidence_images = activity.get("evidence_images", [])
         if evidence_images:
             _insert_evidence_images(ws, row, COL_EVIDENCE, evidence_images)
 

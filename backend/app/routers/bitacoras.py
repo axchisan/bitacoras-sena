@@ -199,6 +199,8 @@ async def generate_bitacora(
 
 @router.post("/{bitacora_id}/export")
 async def export_bitacora(bitacora_id: int, db: AsyncSession = Depends(get_db)):
+    from fastapi.responses import FileResponse
+
     result = await db.execute(
         select(Bitacora)
         .options(selectinload(Bitacora.activities).selectinload(Activity.evidence_files))
@@ -240,11 +242,11 @@ async def export_bitacora(bitacora_id: int, db: AsyncSession = Depends(get_db)):
     bitacora.status = BitacoraStatus.EXPORTED
     await db.commit()
 
-    return {
-        "message": "Excel generado exitosamente",
-        "file_path": str(output_path),
-        "download_url": f"/api/bitacoras/{bitacora_id}/download",
-    }
+    return FileResponse(
+        path=str(output_path),
+        filename=output_path.name,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
 
 
 @router.get("/{bitacora_id}/download")
