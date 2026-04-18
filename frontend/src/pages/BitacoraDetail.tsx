@@ -16,6 +16,14 @@ import {
   CalendarDays, ExternalLink, ChevronDown, ChevronUp, Terminal, X,
 } from "lucide-react";
 
+const STATUS_OPTIONS = [
+  { value: "pending",  label: "Pendiente" },
+  { value: "draft",    label: "Borrador" },
+  { value: "ready",    label: "Lista" },
+  { value: "exported", label: "Exportada" },
+  { value: "uploaded", label: "Subida" },
+] as const;
+
 export default function BitacoraDetail() {
   const { id } = useParams<{ id: string }>();
   const bitacoraId = Number(id);
@@ -87,13 +95,15 @@ export default function BitacoraDetail() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const markReadyMut = useMutation({
-    mutationFn: () => updateBitacora(bitacoraId, { status: "ready" }),
-    onSuccess: () => {
+  const changeStatusMut = useMutation({
+    mutationFn: (status: string) => updateBitacora(bitacoraId, { status: status as any }),
+    onSuccess: (_, status) => {
       qc.invalidateQueries({ queryKey: ["bitacora", bitacoraId] });
       qc.invalidateQueries({ queryKey: ["bitacoras"] });
-      toast.success("Marcada como lista");
+      const label = STATUS_OPTIONS.find((s) => s.value === status)?.label ?? status;
+      toast.success(`Estado cambiado a: ${label}`);
     },
+    onError: (e: Error) => toast.error(e.message),
   });
 
   if (isLoading) {
@@ -109,101 +119,112 @@ export default function BitacoraDetail() {
   const isGenerating = generateMut.isPending;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-start gap-4">
-        <button onClick={() => navigate(-1)} className="btn-ghost mt-0.5">
+      <div className="flex items-start gap-3">
+        <button type="button" onClick={() => navigate(-1)} className="btn-ghost mt-0.5 px-2">
           <ArrowLeft size={16} />
         </button>
-        <div className="flex-1">
-          <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-2xl font-bold text-gray-100">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-100">
               Bitácora {bitacora.number}
             </h1>
             <StatusBadge status={bitacora.status} />
           </div>
-          <p className="text-gray-500 text-sm mt-1 flex items-center gap-2">
-            <CalendarDays size={13} />
-            {formatDate(bitacora.period_start)} → {formatDate(bitacora.period_end)}
+          <p className="text-gray-500 text-xs mt-1 flex items-center gap-1.5 flex-wrap">
+            <CalendarDays size={12} />
+            <span>{formatDate(bitacora.period_start)} → {formatDate(bitacora.period_end)}</span>
             {bitacora.delivery_date && (
-              <span className="text-gray-600">
-                · Entrega: {formatDate(bitacora.delivery_date)}
-              </span>
+              <span className="text-gray-600">· Entrega: {formatDate(bitacora.delivery_date)}</span>
             )}
           </p>
         </div>
+      </div>
 
-        {/* Actions */}
-        <div className="flex items-center gap-2 flex-wrap justify-end">
-          {bitacora.onedrive_url && (
-            <a href={bitacora.onedrive_url} target="_blank" rel="noopener" className="btn-ghost text-xs">
-              <ExternalLink size={14} /> OneDrive
-            </a>
-          )}
+      {/* Actions bar */}
+      <div className="flex flex-wrap gap-2 items-center">
+        {/* Status manual change */}
+        <select
+          value={bitacora.status}
+          onChange={(e) => changeStatusMut.mutate(e.target.value)}
+          disabled={changeStatusMut.isPending}
+          className="text-xs bg-gray-800 border border-gray-700 rounded-lg px-2 py-2 text-gray-300 focus:outline-none focus:border-blue-500 cursor-pointer min-h-[40px] touch-manipulation"
+          title="Cambiar estado manualmente"
+        >
+          {STATUS_OPTIONS.map((s) => (
+            <option key={s.value} value={s.value} className="bg-gray-900">
+              {s.label}
+            </option>
+          ))}
+        </select>
 
-          {hasActivities && bitacora.status === "draft" && (
-            <button onClick={() => markReadyMut.mutate()} className="btn-secondary">
-              Marcar lista
-            </button>
-          )}
+        {bitacora.onedrive_url && (
+          <a href={bitacora.onedrive_url} target="_blank" rel="noopener" className="btn-ghost text-xs">
+            <ExternalLink size={14} /> OneDrive
+          </a>
+        )}
 
-          {hasActivities && (
-            <>
-              <button
-                onClick={() => exportMut.mutate()}
-                disabled={exportMut.isPending}
-                className="btn-secondary"
-              >
-                {exportMut.isPending ? <Spinner className="w-4 h-4" /> : <Download size={16} />}
-                Exportar Excel
-              </button>
-              <button
-                onClick={() => oneDriveMut.mutate()}
-                disabled={oneDriveMut.isPending || !bitacora.excel_file_path}
-                className="btn-secondary"
-              >
-                {oneDriveMut.isPending ? <Spinner className="w-4 h-4" /> : <Upload size={16} />}
-                OneDrive
-              </button>
-            </>
-          )}
-
-          <button
-            onClick={() => setShowClaudeModal(true)}
-            className="btn-secondary"
-            title="Generar usando Claude Code (sin créditos de API)"
-          >
-            <Terminal size={16} />
-            Claude Code
-          </button>
-
-          <div className="flex items-center gap-1">
-            <select
-              value={aiProvider}
-              onChange={(e) => setAiProvider(e.target.value)}
-              disabled={isGenerating}
-              className="text-xs bg-gray-800 border border-gray-700 rounded-l-lg px-2 py-2 text-gray-300 focus:outline-none focus:border-blue-500 cursor-pointer"
-              title="Proveedor de IA"
-            >
-              <option value="anthropic">Claude (Anthropic)</option>
-              <option value="gemini">Gemini Flash (Gratis)</option>
-              <option value="groq">Groq Llama 3.3 (Gratis)</option>
-            </select>
+        {hasActivities && (
+          <>
             <button
-              onClick={() => {
-                if (hasActivities) setRegenerate(true);
-                generateMut.mutate();
-              }}
-              disabled={isGenerating}
-              className="btn-primary rounded-l-none border-l border-blue-700"
+              type="button"
+              onClick={() => exportMut.mutate()}
+              disabled={exportMut.isPending}
+              className="btn-secondary"
             >
-              {isGenerating ? (
-                <><Spinner className="w-4 h-4" /> Generando...</>
-              ) : (
-                <><Sparkles size={16} /> {hasActivities ? "Regenerar" : "Generar"}</>
-              )}
+              {exportMut.isPending ? <Spinner className="w-4 h-4" /> : <Download size={16} />}
+              Exportar Excel
             </button>
-          </div>
+            <button
+              type="button"
+              onClick={() => oneDriveMut.mutate()}
+              disabled={oneDriveMut.isPending || !bitacora.excel_file_path}
+              title={!bitacora.excel_file_path ? "Primero exporta el Excel" : "Subir a OneDrive"}
+              className="btn-secondary"
+            >
+              {oneDriveMut.isPending ? <Spinner className="w-4 h-4" /> : <Upload size={16} />}
+              OneDrive
+            </button>
+          </>
+        )}
+
+        <button
+          type="button"
+          onClick={() => setShowClaudeModal(true)}
+          className="btn-secondary"
+        >
+          <Terminal size={16} />
+          Claude Code
+        </button>
+
+        <div className="flex items-center gap-1 ml-auto">
+          <select
+            value={aiProvider}
+            onChange={(e) => setAiProvider(e.target.value)}
+            disabled={isGenerating}
+            className="text-xs bg-gray-800 border border-gray-700 rounded-l-lg px-2 py-2 text-gray-300 focus:outline-none focus:border-blue-500 cursor-pointer min-h-[40px]"
+            title="Proveedor de IA"
+          >
+            <option value="anthropic">Claude</option>
+            <option value="gemini">Gemini (Gratis)</option>
+            <option value="groq">Groq (Gratis)</option>
+          </select>
+          <button
+            type="button"
+            onClick={() => {
+              if (hasActivities) setRegenerate(true);
+              generateMut.mutate();
+            }}
+            disabled={isGenerating}
+            className="btn-primary rounded-l-none border-l border-blue-700"
+          >
+            {isGenerating ? (
+              <><Spinner className="w-4 h-4" /> Generando...</>
+            ) : (
+              <><Sparkles size={16} /> {hasActivities ? "Regenerar" : "Generar"}</>
+            )}
+          </button>
         </div>
       </div>
 

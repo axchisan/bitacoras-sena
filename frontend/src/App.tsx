@@ -18,7 +18,7 @@ export default function App() {
       <BrowserRouter>
         <div className="flex min-h-screen bg-gray-950">
           <Sidebar />
-          <main className="flex-1 ml-60 p-6 lg:p-8 max-w-6xl">
+          <main className="flex-1 sm:ml-60 p-4 sm:p-6 lg:p-8 pb-20 sm:pb-8 max-w-6xl">
             <Routes>
               <Route path="/" element={<Dashboard />} />
               <Route path="/bitacoras" element={<BitacoraList />} />
