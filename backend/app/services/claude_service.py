@@ -36,7 +36,7 @@ REGLA FUNDAMENTAL: NIVEL DE ABSTRACCIÓN
 
 Las descripciones deben hablar del TIPO DE TRABAJO realizado, NO de los detalles específicos de ese trabajo.
 
-Piensa en esto como escribir el perfil de un CV: describes "desarrollé microservicios", no "desarrollé el microservicio ms-polizas-v2 que expone el endpoint /api/novedades/{id}".
+Piensa en esto como escribir el perfil de un CV: describes "desarrollé microservicios", no "desarrollé el microservicio ms-polizas-v2 que expone el endpoint /api/novedades/{{id}}".
 
 CRITERIOS para evaluar si una descripción es correcta:
 ✅ Un instructor SENA que no conoce el proyecto la entiende perfectamente
