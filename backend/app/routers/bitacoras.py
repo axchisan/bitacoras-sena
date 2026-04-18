@@ -201,7 +201,7 @@ async def generate_bitacora(
 async def export_bitacora(bitacora_id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(Bitacora)
-        .options(selectinload(Bitacora.activities))
+        .options(selectinload(Bitacora.activities).selectinload(Activity.evidence_files))
         .where(Bitacora.id == bitacora_id)
     )
     bitacora = result.scalar_one_or_none()
