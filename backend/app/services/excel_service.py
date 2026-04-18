@@ -5,6 +5,7 @@ from pathlib import Path
 from datetime import date
 import openpyxl
 from openpyxl.styles import Alignment
+from openpyxl.drawing.image import Image as XlImage
 from app.config import get_settings
 
 settings = get_settings()
@@ -109,6 +110,53 @@ def _get_clean_template() -> Path:
     return clean
 
 
+def _col_letter(col: int) -> str:
+    """Convert 1-based column index to Excel letter (1→A, 8→H)."""
+    result = ""
+    while col:
+        col, rem = divmod(col - 1, 26)
+        result = chr(65 + rem) + result
+    return result
+
+
+def _insert_evidence_images(ws, row: int, col: int, image_paths: list[str]) -> None:
+    """Insert evidence images into the evidence cell of an activity row."""
+    col_letter = _col_letter(col)
+    valid_paths = [p for p in image_paths if p and Path(p).exists()]
+    if not valid_paths:
+        return
+
+    # Max dimensions per image: 160×120 px (fits within a cell)
+    img_w, img_h = 160, 120
+    total_h_pts = max(90, len(valid_paths) * (img_h * 0.75 + 4))
+    ws.row_dimensions[row].height = total_h_pts
+
+    for idx, img_path in enumerate(valid_paths):
+        try:
+            xl_img = XlImage(img_path)
+            xl_img.width = img_w
+            xl_img.height = img_h
+            # Stack images vertically within the same column cell
+            from openpyxl.drawing.spreadsheet_drawing import AnchorMarker, TwoCellAnchor
+            from openpyxl.utils.units import pixels_to_EMU, cm_to_EMU
+            from openpyxl.drawing.xdr import XDRPoint2D, XDRPositiveSize2D
+
+            col_idx = col - 1   # 0-based
+            row_idx = row - 1   # 0-based
+            row_offset_px = idx * (img_h + 4)
+
+            from openpyxl.drawing.spreadsheet_drawing import OneCellAnchor, AnchorMarker
+            marker = AnchorMarker(
+                col=col_idx, colOff=pixels_to_EMU(2),
+                row=row_idx, rowOff=pixels_to_EMU(row_offset_px + 2),
+            )
+            size = XDRPositiveSize2D(cx=pixels_to_EMU(img_w), cy=pixels_to_EMU(img_h))
+            xl_img.anchor = OneCellAnchor(_from=marker, ext=size)
+            ws.add_image(xl_img)
+        except Exception:
+            pass  # Never break export due to image insertion failure
+
+
 def generate_excel(
     bitacora_number: int,
     period_start: date,
@@ -172,6 +220,11 @@ def generate_excel(
         obs_cell = ws.cell(row=row, column=COL_OBSERVATIONS)
         obs_cell.value = activity.get("observations", "")
         obs_cell.alignment = wrap_alignment
+
+        # Insertar imágenes de evidencia en la celda correspondiente
+        evidence_images = activity.get("evidence_images", [])
+        if evidence_images:
+            _insert_evidence_images(ws, row, COL_EVIDENCE, evidence_images)
 
     wb.save(str(output_path))
     wb.close()

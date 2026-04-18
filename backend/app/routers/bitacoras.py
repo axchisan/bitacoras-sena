@@ -9,7 +9,7 @@ from app.database import get_db
 from app.models.bitacora import Bitacora, Activity, BitacoraStatus
 from app.schemas.bitacora import BitacoraOut, BitacoraListItem, BitacoraUpdate, GenerateRequest
 from app.utils.dates import get_all_periods, get_period_for_bitacora
-from app.services import azure_devops, claude_service, excel_service, onedrive_service
+from app.services import azure_devops, ai_service, excel_service, onedrive_service
 
 router = APIRouter(prefix="/api/bitacoras", tags=["bitacoras"])
 
@@ -147,10 +147,11 @@ async def generate_bitacora(
             )
 
         period = get_period_for_bitacora(bitacora.number)
-        generated = await claude_service.generate_bitacora_activities(
+        generated = await ai_service.generate_bitacora_activities(
             bitacora_number=bitacora.number,
             period_label=period.label,
             work_items=work_items,
+            provider=req.ai_provider,
         )
 
     # If regenerating, delete existing activities
@@ -218,6 +219,10 @@ async def export_bitacora(bitacora_id: int, db: AsyncSession = Depends(get_db)):
             "end_date": a.end_date,
             "evidence_description": a.evidence_description,
             "observations": a.observations,
+            "evidence_images": [
+                ef.file_path for ef in a.evidence_files
+                if ef.file_type and ef.file_type.startswith("image/")
+            ],
         }
         for a in sorted(bitacora.activities, key=lambda x: x.order_index)
     ]

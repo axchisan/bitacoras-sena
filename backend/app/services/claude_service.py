@@ -4,7 +4,6 @@ from app.config import get_settings
 
 settings = get_settings()
 
-# Competencias ADSO del programa Tecnólogo en Análisis y Desarrollo de Software
 SENA_COMPETENCIAS = """
 Las competencias del programa 'Tecnólogo en Análisis y Desarrollo de Software' (ADSO) son:
 1. Gestionar la infraestructura tecnológica requerida en el proceso de desarrollo de software
@@ -31,27 +30,50 @@ BITÁCORA N°: {bitacora_number}
 WORK ITEMS DEL PERÍODO:
 {work_items_json}
 
-INSTRUCCIONES:
-1. Agrupa los work items en actividades coherentes (máximo 6 actividades, mínimo 3).
-2. Cada actividad debe tener:
-   - "title": Título conciso y profesional de la actividad (máx 80 chars)
-   - "description": Descripción formal de la actividad (2-4 oraciones), redactada en tercera persona o infinitivo, en tono técnico-profesional apropiado para un documento SENA. Describe QUÉ tipo de actividad se realizó y con qué tecnologías o metodologías generales, SIN mencionar nombres internos de servicios, módulos, clases ni componentes específicos del proyecto.
-   - "competencias": Una o dos competencias del programa ADSO que aplican directamente a esta actividad. Redactar de forma precisa y relacionada con la actividad específica.
-   - "start_date": Fecha de inicio estimada en formato YYYY-MM-DD (dentro del período)
-   - "end_date": Fecha de fin estimada en formato YYYY-MM-DD (dentro del período)
-   - "evidence_description": Qué tipo de evidencia existe (ej: "Proceso: Implementación de pruebas unitarias en repositorio Git", "Entregable: Componente de software desarrollado y mergeado")
-   - "observations": Observaciones relevantes si aplica (puede ser vacío "")
-   - "azure_work_item_ids": Lista de IDs de los work items agrupados en esta actividad
+═══════════════════════════════════════════════════════════
+REGLA FUNDAMENTAL: NIVEL DE ABSTRACCIÓN
+═══════════════════════════════════════════════════════════
 
-3. IMPORTANTE — Nivel de generalización en las descripciones:
-   - NO uses nombres específicos de microservicios, módulos, clases, métodos ni tablas internas del proyecto.
-   - SÍ puedes mencionar tecnologías generales: Java, Spring Boot, JUnit, Mockito, JaCoCo, Git, etc.
-   - En lugar de "microservicio ms-adm-polizas", escribe "microservicio de gestión" o simplemente "microservicio".
-   - En lugar de "clase PolicyService.java", escribe "componente de lógica de negocio".
-   - El objetivo es que la bitácora sea comprensible para un instructor SENA sin exponer detalles de arquitectura interna del cliente.
-4. La descripción debe sonar profesional y técnica, apta para presentar ante un instructor SENA.
-5. Usa lenguaje en español formal colombiano.
-6. Los fines de semana no cuentan como días de trabajo, tenlo en cuenta para las fechas.
+Las descripciones deben hablar del TIPO DE TRABAJO realizado, NO de los detalles específicos de ese trabajo.
+
+Piensa en esto como escribir el perfil de un CV: describes "desarrollé microservicios", no "desarrollé el microservicio ms-polizas-v2 que expone el endpoint /api/novedades/{id}".
+
+CRITERIOS para evaluar si una descripción es correcta:
+✅ Un instructor SENA que no conoce el proyecto la entiende perfectamente
+✅ No revela arquitectura, dominio de negocio ni lógica interna del cliente
+✅ Habla de CATEGORÍAS de trabajo: pruebas, desarrollo, análisis, pipelines, etc.
+✅ Menciona tecnologías generales: Java, Spring Boot, JUnit, Git, Azure DevOps, etc.
+
+EJEMPLOS CONCRETOS:
+
+❌ MAL: "Se corrigieron bugs en el flujo de creación de novedades y propagación de documentos adjuntos hacia sistemas externos en el microservicio de pólizas"
+✅ BIEN: "Se realizó análisis y corrección de errores de funcionalidad en componentes de software de la aplicación, aplicando técnicas de depuración y validación"
+
+❌ MAL: "Se implementaron pruebas unitarias para los casos de uso PolicyApprovalUseCase y NoveltiesProcessorService con JUnit y Mockito"
+✅ BIEN: "Se implementaron pruebas unitarias utilizando JUnit y Mockito para incrementar la cobertura de código en los componentes de la aplicación"
+
+❌ MAL: "Se optimizaron los pipelines CI/CD de los repositorios 397-dev-ms-adm-polizas y 397-dev-ms-core-usuarios eliminando etapas duplicadas"
+✅ BIEN: "Se optimizaron los pipelines de integración continua en Azure DevOps, reorganizando etapas y eliminando redundancias para mejorar los tiempos de construcción"
+
+❌ MAL: "Se realizó análisis de causa raíz del bug #394543 relacionado con la generación de campos en el archivo CLOB de salida"
+✅ BIEN: "Se realizó análisis de causa raíz e implementación de correcciones en componentes del sistema, con posterior creación de pull requests para revisión del equipo"
+
+═══════════════════════════════════════════════════════════
+
+INSTRUCCIONES:
+1. Agrupa los work items en actividades coherentes (máximo 6, mínimo 3).
+2. Cada actividad debe cubrir entre 2 y 8 días hábiles del período.
+3. Cada actividad debe tener:
+   - "title": Título general de la categoría de trabajo (máx 80 chars). Ej: "Implementación de pruebas unitarias", "Corrección de errores de funcionalidad", "Optimización de pipelines CI/CD"
+   - "description": 2-4 oraciones describiendo el TIPO de actividad y tecnologías generales usadas. Jamás mencionar: nombres de microservicios, módulos, clases, métodos, tablas, endpoints, ni términos del dominio de negocio del cliente (pólizas, novedades, usuarios, etc.). Usar solo términos técnicos genéricos.
+   - "competencias": Competencia ADSO directamente relacionada con esta actividad
+   - "start_date": Fecha de inicio en YYYY-MM-DD (días hábiles, sin fines de semana)
+   - "end_date": Fecha de fin en YYYY-MM-DD (días hábiles, sin fines de semana)
+   - "evidence_description": Tipo de evidencia (ej: "Proceso: Implementación de pruebas en repositorio Git", "Entregable: Componentes de software desarrollados", "Producto: Pipeline CI/CD optimizado")
+   - "observations": Observaciones adicionales o vacío ""
+   - "azure_work_item_ids": IDs de los work items incluidos en esta actividad
+4. Usa español formal colombiano.
+5. Las fechas deben estar dentro del período indicado, sin fines de semana.
 
 Responde ÚNICAMENTE con un JSON válido con esta estructura exacta:
 {{
@@ -76,10 +98,6 @@ async def generate_bitacora_activities(
     period_label: str,
     work_items: list[dict],
 ) -> list[dict]:
-    """
-    Uses Claude to generate structured activities from Azure DevOps work items.
-    Returns a list of activity dicts ready to be saved to the database.
-    """
     client = AsyncAnthropic(api_key=settings.anthropic_api_key)
 
     work_items_summary = []
@@ -87,12 +105,10 @@ async def generate_bitacora_activities(
         work_items_summary.append({
             "id": wi["azure_id"],
             "title": wi["title"],
-            "description": wi.get("description", "")[:500],
             "type": wi["work_item_type"],
             "state": wi["state"],
             "tags": wi.get("tags", ""),
             "changed_date": str(wi.get("changed_date", "")),
-            "closed_date": str(wi.get("closed_date", "")),
         })
 
     prompt = GENERATION_PROMPT.format(
@@ -103,14 +119,15 @@ async def generate_bitacora_activities(
     )
 
     message = await client.messages.create(
-        model="claude-opus-4-6",
+        model="claude-haiku-4-5-20251001",
         max_tokens=4096,
         messages=[{"role": "user", "content": prompt}],
     )
 
-    response_text = message.content[0].text.strip()
+    return _parse_activities(message.content[0].text.strip())
 
-    # Extract JSON from response (handle potential markdown code blocks)
+
+def _parse_activities(response_text: str) -> list[dict]:
     if "```json" in response_text:
         response_text = response_text.split("```json")[1].split("```")[0].strip()
     elif "```" in response_text:
@@ -118,10 +135,7 @@ async def generate_bitacora_activities(
 
     data = json.loads(response_text)
     activities = data.get("activities", [])
-
-    # Add metadata flag
     for i, act in enumerate(activities):
         act["is_ai_generated"] = True
         act["order_index"] = i
-
     return activities

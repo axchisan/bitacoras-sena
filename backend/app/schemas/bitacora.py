@@ -141,7 +141,8 @@ class ActivityImport(BaseModel):
 class GenerateRequest(BaseModel):
     work_item_ids: Optional[list[int]] = None  # Si None, usa todos del período
     regenerate: bool = False  # Si True, reemplaza actividades existentes
-    activities: Optional[list[ActivityImport]] = None  # Si se provee, bypasea Claude API
+    activities: Optional[list[ActivityImport]] = None  # Si se provee, bypasea IA
+    ai_provider: Optional[str] = None  # "anthropic" | "gemini" | "groq" (None = usa config)
 
 
 class ReorderActivities(BaseModel):

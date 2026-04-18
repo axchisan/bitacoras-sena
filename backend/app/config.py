@@ -17,6 +17,12 @@ class Settings(BaseSettings):
     # Anthropic
     anthropic_api_key: str = ""
 
+    # IA — Proveedor activo y claves de API alternativas
+    # Opciones: "anthropic" | "gemini" | "groq"
+    ai_provider: str = "anthropic"
+    gemini_api_key: str = ""   # Google Gemini — gratis: 15 RPM, 1M tokens/día
+    groq_api_key: str = ""     # Groq Llama 3.3 70B — gratis: 500K tokens/día
+
     # OneDrive / Microsoft Graph
     onedrive_client_id: str = ""
     onedrive_client_secret: str = ""

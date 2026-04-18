@@ -108,11 +108,17 @@ export const getBitacora = (id: number) =>
 export const updateBitacora = (id: number, data: Partial<Bitacora>) =>
   api.patch<Bitacora>(`/bitacoras/${id}`, data).then((r) => r.data);
 
-export const generateBitacora = (id: number, workItemIds?: number[], regenerate = false) =>
+export const generateBitacora = (
+  id: number,
+  workItemIds?: number[],
+  regenerate = false,
+  aiProvider?: string,
+) =>
   api
     .post<Bitacora>(`/bitacoras/${id}/generate`, {
       work_item_ids: workItemIds ?? null,
       regenerate,
+      ai_provider: aiProvider ?? null,
     })
     .then((r) => r.data);
 

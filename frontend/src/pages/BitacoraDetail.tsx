@@ -26,6 +26,7 @@ export default function BitacoraDetail() {
   const [selectedWorkItems, setSelectedWorkItems] = useState<number[]>([]);
   const [regenerate, setRegenerate] = useState(false);
   const [showClaudeModal, setShowClaudeModal] = useState(false);
+  const [aiProvider, setAiProvider] = useState<string>("anthropic");
 
   const { data: bitacora, isLoading } = useQuery({
     queryKey: ["bitacora", bitacoraId],
@@ -43,7 +44,8 @@ export default function BitacoraDetail() {
       generateBitacora(
         bitacoraId,
         selectedWorkItems.length > 0 ? selectedWorkItems : undefined,
-        regenerate
+        regenerate,
+        aiProvider,
       ),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["bitacora", bitacoraId] });
@@ -175,20 +177,33 @@ export default function BitacoraDetail() {
             Claude Code
           </button>
 
-          <button
-            onClick={() => {
-              if (hasActivities) setRegenerate(true);
-              generateMut.mutate();
-            }}
-            disabled={isGenerating}
-            className="btn-primary"
-          >
-            {isGenerating ? (
-              <><Spinner className="w-4 h-4" /> Generando...</>
-            ) : (
-              <><Sparkles size={16} /> {hasActivities ? "Regenerar con IA" : "Generar con IA"}</>
-            )}
-          </button>
+          <div className="flex items-center gap-1">
+            <select
+              value={aiProvider}
+              onChange={(e) => setAiProvider(e.target.value)}
+              disabled={isGenerating}
+              className="text-xs bg-gray-800 border border-gray-700 rounded-l-lg px-2 py-2 text-gray-300 focus:outline-none focus:border-blue-500 cursor-pointer"
+              title="Proveedor de IA"
+            >
+              <option value="anthropic">Claude (Anthropic)</option>
+              <option value="gemini">Gemini Flash (Gratis)</option>
+              <option value="groq">Groq Llama 3.3 (Gratis)</option>
+            </select>
+            <button
+              onClick={() => {
+                if (hasActivities) setRegenerate(true);
+                generateMut.mutate();
+              }}
+              disabled={isGenerating}
+              className="btn-primary rounded-l-none border-l border-blue-700"
+            >
+              {isGenerating ? (
+                <><Spinner className="w-4 h-4" /> Generando...</>
+              ) : (
+                <><Sparkles size={16} /> {hasActivities ? "Regenerar" : "Generar"}</>
+              )}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -229,7 +244,9 @@ export default function BitacoraDetail() {
           <div className="text-center">
             <p className="font-medium text-gray-200">Generando actividades con IA...</p>
             <p className="text-sm text-gray-500 mt-1">
-              Claude está analizando tus work items para crear la bitácora
+              {aiProvider === "gemini" && "Gemini Flash está analizando tus work items"}
+              {aiProvider === "groq" && "Llama 3.3 (Groq) está analizando tus work items"}
+              {aiProvider === "anthropic" && "Claude está analizando tus work items"}
             </p>
           </div>
         </div>
