@@ -127,6 +127,12 @@ def _insert_evidence_images(ws, row: int, col: int, image_paths: list[str]) -> N
         return
 
     img_w, img_h = 300, 220  # pixels per image (bigger, fills the evidence cell)
+    # Ajusta el ancho de la columna de evidencia al ancho de la imagen
+    # Excel: width_units ≈ (px - 5) / 7 para fuente Calibri 11
+    needed_col_width = (img_w - 5) / 7
+    current_col_width = ws.column_dimensions[col_letter].width or 0
+    if current_col_width < needed_col_width:
+        ws.column_dimensions[col_letter].width = needed_col_width
     # Set row tall enough to show all stacked images (1 pt ≈ 1.33 px → px * 0.75 = pt)
     per_img_pt = img_h * 0.75 + 6
     ws.row_dimensions[row].height = max(100, len(valid_paths) * per_img_pt)

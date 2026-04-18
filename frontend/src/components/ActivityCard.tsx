@@ -296,12 +296,13 @@ export function ActivityCard({ activity, bitacoraId, onDelete }: Props) {
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="text-xs font-medium text-gray-400">
-                Archivos de evidencia
+                Evidencia (máx. 1 imagen)
               </label>
               <button
                 onClick={() => fileInputRef.current?.click()}
-                disabled={uploadMut.isPending}
-                className="btn-ghost py-1 px-2 text-xs"
+                disabled={uploadMut.isPending || activity.evidence_files.length >= 1}
+                className="btn-ghost py-1 px-2 text-xs disabled:opacity-40 disabled:cursor-not-allowed"
+                title={activity.evidence_files.length >= 1 ? "Elimina la evidencia actual antes de subir otra" : "Subir evidencia"}
               >
                 {uploadMut.isPending ? (
                   <Spinner className="w-3 h-3" />
@@ -326,7 +327,7 @@ export function ActivityCard({ activity, bitacoraId, onDelete }: Props) {
               >
                 <Upload size={20} className="mx-auto text-gray-600 mb-2" />
                 <p className="text-xs text-gray-600">
-                  Arrastra o haz clic para subir capturas de pantalla o PDFs
+                  Arrastra o haz clic para subir una captura o PDF
                 </p>
               </div>
             ) : (
@@ -364,14 +365,6 @@ export function ActivityCard({ activity, bitacoraId, onDelete }: Props) {
                     <p className="text-[10px] text-gray-500 px-1.5 py-1 truncate">{ev.file_name}</p>
                   </div>
                 ))}
-
-                {/* Add more */}
-                <div
-                  className="h-full min-h-[5rem] border-2 border-dashed border-gray-800 rounded-lg flex items-center justify-center cursor-pointer hover:border-gray-700 transition-colors"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <Upload size={18} className="text-gray-600" />
-                </div>
               </div>
             )}
           </div>

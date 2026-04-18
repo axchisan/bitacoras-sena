@@ -31,6 +31,16 @@ async def upload_evidence(
     if not activity:
         raise HTTPException(status_code=404, detail="Actividad no encontrada")
 
+    # Límite: una sola evidencia por actividad
+    existing = await db.execute(
+        select(Evidence).where(Evidence.activity_id == activity_id)
+    )
+    if existing.scalar_one_or_none():
+        raise HTTPException(
+            status_code=400,
+            detail="Esta actividad ya tiene una evidencia. Eliminá la actual antes de subir otra."
+        )
+
     # Validate file type
     if file.content_type not in ALLOWED_TYPES:
         raise HTTPException(
