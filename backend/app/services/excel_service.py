@@ -120,41 +120,26 @@ def _col_letter(col: int) -> str:
 
 
 def _insert_evidence_images(ws, row: int, col: int, image_paths: list[str]) -> None:
-    """Insert evidence images into the evidence cell of an activity row."""
+    """Insert evidence images anchored to the evidence cell of each activity row."""
     col_letter = _col_letter(col)
     valid_paths = [p for p in image_paths if p and Path(p).exists()]
     if not valid_paths:
         return
 
-    # Max dimensions per image: 160×120 px (fits within a cell)
-    img_w, img_h = 160, 120
-    total_h_pts = max(90, len(valid_paths) * (img_h * 0.75 + 4))
-    ws.row_dimensions[row].height = total_h_pts
+    img_w, img_h = 160, 120  # pixels per image
+    # Set row tall enough to show all stacked images (1 pt ≈ 1.33 px)
+    ws.row_dimensions[row].height = max(90, len(valid_paths) * (img_h * 0.75 + 4))
 
     for idx, img_path in enumerate(valid_paths):
         try:
             xl_img = XlImage(img_path)
             xl_img.width = img_w
             xl_img.height = img_h
-            # Stack images vertically within the same column cell
-            from openpyxl.drawing.spreadsheet_drawing import AnchorMarker, TwoCellAnchor
-            from openpyxl.utils.units import pixels_to_EMU, cm_to_EMU
-            from openpyxl.drawing.xdr import XDRPoint2D, XDRPositiveSize2D
-
-            col_idx = col - 1   # 0-based
-            row_idx = row - 1   # 0-based
-            row_offset_px = idx * (img_h + 4)
-
-            from openpyxl.drawing.spreadsheet_drawing import OneCellAnchor, AnchorMarker
-            marker = AnchorMarker(
-                col=col_idx, colOff=pixels_to_EMU(2),
-                row=row_idx, rowOff=pixels_to_EMU(row_offset_px + 2),
-            )
-            size = XDRPositiveSize2D(cx=pixels_to_EMU(img_w), cy=pixels_to_EMU(img_h))
-            xl_img.anchor = OneCellAnchor(_from=marker, ext=size)
-            ws.add_image(xl_img)
+            # Simple string anchor: "H47", "H49", etc. openpyxl places the image
+            # at the top-left corner of that cell. Multiple images stack.
+            ws.add_image(xl_img, f"{col_letter}{row + idx}")
         except Exception:
-            pass  # Never break export due to image insertion failure
+            pass  # Never break the export if an image fails
 
 
 def generate_excel(

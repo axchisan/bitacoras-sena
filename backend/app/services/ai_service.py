@@ -78,6 +78,8 @@ async def _call_gemini(prompt: str) -> str:
 
     async with httpx.AsyncClient(timeout=60) as client:
         resp = await client.post(url, json=payload)
+        if resp.status_code == 429:
+            raise Exception("Gemini: límite de cuota excedido (free tier: 15 RPM). Espera un minuto o usa Groq.")
         if resp.status_code != 200:
             raise Exception(f"Gemini API error {resp.status_code}: {resp.text[:300]}")
         data = resp.json()
